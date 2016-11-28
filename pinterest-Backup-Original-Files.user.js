@@ -3,8 +3,7 @@
 // @description Download all original images from your Pinterest.com profile. Creates an entry in the Greasemonkey menu, just go to one of your boards, scroll down to the last image and click the option in the menu.
 // @namespace   cuzi
 // @oujs:author cuzi
-// @updateURL   https://openuserjs.org/meta/cuzi/Pinterest.com_Backup_Original_Files.meta.js
-// @version     6
+// @version     7
 // @include     https://*pinterest.com/*
 // @grant       GM_xmlhttpRequest
 // @grant       GM_registerMenuCommand
@@ -34,7 +33,7 @@ function collectImages() {
     imgList = [];
   }
   
-  var imgs = document.querySelectorAll(".locationBoardPageContentWrapper .Image.Module.pinUiImage img");
+  var imgs = document.querySelectorAll(".transformWrapper.boardPageContent .Image.Module.pinUiImage img");
   for(var i = 0; i < imgs.length; i++) {
     var entry = [imgs[i].src.replace(/\/\d+x\//,"/originals/"),imgs[i].src];
     var exists = false;
