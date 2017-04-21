@@ -3,7 +3,7 @@
 // @description Download all original images from your Pinterest.com profile. Creates an entry in the Greasemonkey menu, just go to one of your boards, scroll down to the last image and click the option in the menu.
 // @namespace   cuzi
 // @oujs:author cuzi
-// @version     9
+// @version     10
 // @include     https://*pinterest.com/*
 // @grant       GM_xmlhttpRequest
 // @grant       GM_registerMenuCommand
@@ -35,7 +35,7 @@ function collectImages() {
     imgList = [];
   }
   
-  var imgs = document.querySelectorAll(".transformWrapper.boardPageContent .Image.Module.pinUiImage img");
+  var imgs = document.querySelectorAll(".BoardPinGrid .Pin .pinImageWrapper img");
   for(var i = 0; i < imgs.length; i++) {
     var entry = [imgs[i].src.replace(/\/\d+x\//,"/originals/"),imgs[i].src];
     var exists = false;
@@ -136,17 +136,19 @@ function addButton() {
     return;
   }
   
-  if((document.querySelector(".BoardHeader h1.boardTitle") || document.querySelector(".BoardHeader .boardName")) && document.querySelectorAll(".Image.Module.pinUiImage img").length) {
+  if((document.querySelector(".boardNameWrapper") || document.querySelector(".boardHeaderWrapper")) && document.querySelectorAll(".BoardPinGrid .Pin .pinImageWrapper img").length) {
     var button = document.createElement("button");
     button.type = "button";
     button.setAttribute("class","downloadoriginal123button BoardFollowButton Button FollowButton Module boardFollowUnfollowButton btn hasText notNavigatable primary rounded");
     button.setAttribute("style","margin-left:10px;");
     button.innerHTML = '<span class="buttonText">Download originals</span>';
     button.addEventListener("click", main);
-    if(document.querySelector(".dp-flex-auto")) {
-      document.querySelector(".dp-flex-auto").appendChild(button);
+    if(document.querySelector(".BoardFollowButton")) {
+      document.querySelector(".BoardFollowButton").parentNode.appendChild(button);
+    } else if(document.querySelector(".boardHeaderWrapper")) {
+      document.querySelector(".boardHeaderWrapper").appendChild(button);
     } else {
-      document.querySelector(".thumbUserInfo").appendChild(button);
+      document.querySelector(".boardPageContentWrapper").insertBefore(button, document.querySelector(".boardPageContentWrapper").firstChild);
     }
   }
 }
