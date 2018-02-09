@@ -3,9 +3,7 @@
 // @description Download all original images from your Pinterest.com profile. Creates an entry in the Greasemonkey menu, just go to one of your boards, scroll down to the last image and click the option in the menu.
 // @namespace   cuzi
 // @license     MIT
-// @copyright   2016, cuzi (https://openuserjs.org/users/cuzi)
-// @version     11
-// @updateURL   https://openuserjs.org/meta/cuzi/Pinterest.com_Backup_Original_Files.meta.js
+// @version     12
 // @include     https://*pinterest.com/*
 // @include     https://*pinterest.de/*
 // @grant       GM_xmlhttpRequest
@@ -16,6 +14,7 @@
 // @connect     pinterest.com
 // @connect     pinterest.de
 // @connect     pinimg.com
+// @updateURL   https://openuserjs.org/meta/cuzi/Pinterest.com_Backup_Original_Files.meta.js
 // ==/UserScript==
 
 
@@ -44,7 +43,7 @@ function collectImages() {
     imgList = [];
   }
   
-  let imgs = document.querySelectorAll(".BoardPinGrid .Pin .pinImageWrapper img");
+  let imgs = document.querySelectorAll(".BoardPinGrid .Pin .pinWrapper img");
   for(let i = 0; i < imgs.length; i++) {
     let entry = [imgs[i].src.replace(/\/\d+x\//,"/originals/"),imgs[i].src];
     let exists = false;
@@ -147,7 +146,7 @@ function addButton() {
     return;
   }
   
-  if((document.querySelector(".boardNameWrapper") || document.querySelector(".boardHeaderWrapper")) && document.querySelectorAll(".BoardPinGrid .Pin .pinImageWrapper img").length) {
+  if((document.querySelector(".boardNameWrapper") || document.querySelector(".boardHeaderWrapper")) && document.querySelectorAll(".BoardPinGrid .Pin .pinWrapper img").length) {
     var button = document.createElement("button");
     button.type = "button";
     button.setAttribute("class","downloadoriginal123button BoardFollowButton Button FollowButton Module boardFollowUnfollowButton btn hasText notNavigatable primary rounded");
@@ -1201,7 +1200,7 @@ exports.generateWorker = function (zip, options, comment) {
  * @constructor
  */
 function JSZip() {
-    // if this constructor is used without `new`, it adds `new` before itself:
+    // if this constructor is used without `new`, it adds `new` before itself:
     if(!(this instanceof JSZip)) {
         return new JSZip();
     }
