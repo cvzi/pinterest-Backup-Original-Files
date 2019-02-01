@@ -1,6 +1,6 @@
 # pinterest-Backup-Original-Files
 
-[**Click here for install**](https://github.com/cvzi/pinterest-Backup-Original-Files/raw/master/pinterest-Backup-Original-Files.user.js)
+[**Click here for install**](https://github.com/cvzi/pinterest-Backup-Original-Files/raw/master/Pinterest.com_Backup_Original_Files.user.js)
 
 This is a [Greasemonkey](https://addons.mozilla.org/en-US/firefox/addon/greasemonkey/) script.
 You can find information about Greasemonkey scripts over at [wiki.greasespot.net](https://wiki.greasespot.net/Greasemonkey_Manual:Installing_Scripts).
