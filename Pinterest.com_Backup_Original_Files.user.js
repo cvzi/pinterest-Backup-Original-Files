@@ -3,7 +3,7 @@
 // @description Download all original images from your Pinterest.com profile. Creates an entry in the Greasemonkey menu, just go to one of your boards, scroll down to the last image and click the option in the menu.
 // @namespace   cuzi
 // @license     MIT
-// @version     12
+// @version     13
 // @include     https://*pinterest.com/*
 // @include     https://*pinterest.de/*
 // @grant       GM_xmlhttpRequest
@@ -43,9 +43,32 @@ function collectImages() {
     imgList = [];
   }
   
-  let imgs = document.querySelectorAll(".BoardPinGrid .Pin .pinWrapper img");
+  let imgs = document.querySelectorAll(".gridCentered .Pin .pinWrapper img");
   for(let i = 0; i < imgs.length; i++) {
     let entry = [imgs[i].src.replace(/\/\d+x\//,"/originals/"),imgs[i].src];
+    
+    if(imgs[i].srcset) {
+      // e.g. srcset="https://i-h2.pinimg.com/236x/15/87/ae/abcdefg1234.jpg 1x, https://i-h2.pinimg.com/474x/15/87/ae/abcdefg1234.jpg 2x, https://i-h2.pinimg.com/736x/15/87/ae/abcdefg1234.jpg 3x, https://i-h2.pinimg.com/originals/15/87/ae/abcdefg1234.png 4x"
+      
+      let goodUrl = false;
+      let quality = -1;
+      let srcset = imgs[i].srcset.split(", ");
+      for(let j = 0; j < srcset.length; j++) {
+        let pair = srcset[j].split(" ");
+        let q = parseInt(pair[1].replace("x"))
+        if(q > quality) {
+          goodUrl = pair[0];
+          quality = q;
+        }
+        if(pair[0].indexOf("/originals/") != -1) {
+          break;
+        }
+      }
+      if(goodUrl && quality != -1) {
+        entry[0] = goodUrl;
+      }
+    }
+    
     let exists = false;
     for(let j = 0; j < imgList.length; j++) {
       if(imgList[j][0] == entry[0] && imgList[j][1] == entry[1]) {
@@ -54,7 +77,7 @@ function collectImages() {
       }
     }
     if(!exists) {
-      imgList.push([imgs[i].src.replace(/\/\d+x\//,"/originals/"),imgs[i].src]);
+      imgList.push([entry[0], entry[1]]);
     }
   }
 }
@@ -146,15 +169,15 @@ function addButton() {
     return;
   }
   
-  if((document.querySelector(".boardNameWrapper") || document.querySelector(".boardHeaderWrapper")) && document.querySelectorAll(".BoardPinGrid .Pin .pinWrapper img").length) {
+  if(document.querySelector(".boardHeaderWrapper") && document.querySelectorAll(".gridCentered .Pin .pinWrapper img").length) {
     var button = document.createElement("button");
     button.type = "button";
     button.setAttribute("class","downloadoriginal123button BoardFollowButton Button FollowButton Module boardFollowUnfollowButton btn hasText notNavigatable primary rounded");
     button.setAttribute("style","margin-left:10px;");
     button.innerHTML = '<span class="buttonText">Download originals</span>';
     button.addEventListener("click", main);
-    if(document.querySelector(".BoardFollowButton")) {
-      document.querySelector(".BoardFollowButton").parentNode.appendChild(button);
+    if(document.querySelector(".infoBar *[data-test-id='board-follow-button']")) {
+      document.querySelector(".infoBar *[data-test-id='board-follow-button']").parentNode.parentNode.parentNode.appendChild(button);
     } else if(document.querySelector(".boardHeaderWrapper")) {
       document.querySelector(".boardHeaderWrapper").appendChild(button);
     } else {
