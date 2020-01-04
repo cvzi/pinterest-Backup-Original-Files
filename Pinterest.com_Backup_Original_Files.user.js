@@ -3,7 +3,7 @@
 // @description Download all original images from your Pinterest.com profile. Creates an entry in the Greasemonkey menu, just go to one of your boards, scroll down to the last image and click the option in the menu.
 // @namespace   cuzi
 // @license     MIT
-// @version     13
+// @version     14
 // @include     https://*pinterest.com/*
 // @include     https://*pinterest.de/*
 // @grant       GM_xmlhttpRequest
@@ -42,14 +42,18 @@ function collectImages() {
     url = document.location.href;
     imgList = [];
   }
-  
-  let imgs = document.querySelectorAll(".gridCentered .Pin .pinWrapper img");
+
+  let imgs = document.querySelectorAll('.gridCentered a[href^="/pin/"] img');
   for(let i = 0; i < imgs.length; i++) {
+    if (imgs[i].clientWidth < 100) {
+      // Skip small images, these are user profile photos
+      continue;
+    }
     let entry = [imgs[i].src.replace(/\/\d+x\//,"/originals/"),imgs[i].src];
-    
+
     if(imgs[i].srcset) {
       // e.g. srcset="https://i-h2.pinimg.com/236x/15/87/ae/abcdefg1234.jpg 1x, https://i-h2.pinimg.com/474x/15/87/ae/abcdefg1234.jpg 2x, https://i-h2.pinimg.com/736x/15/87/ae/abcdefg1234.jpg 3x, https://i-h2.pinimg.com/originals/15/87/ae/abcdefg1234.png 4x"
-      
+
       let goodUrl = false;
       let quality = -1;
       let srcset = imgs[i].srcset.split(", ");
@@ -68,7 +72,7 @@ function collectImages() {
         entry[0] = goodUrl;
       }
     }
-    
+
     let exists = false;
     for(let j = 0; j < imgList.length; j++) {
       if(imgList[j][0] == entry[0] && imgList[j][1] == entry[1]) {
@@ -87,30 +91,41 @@ function downloadOriginals() {
     boardName = document.querySelector(".boardName").innerText.replace(/[^a-z0-9]/gi, '_');
     userName = document.location.href.match(/\.(com|de)\/(.*?)\//)[2].replace(/[^a-z0-9]/gi, '_');
   } catch(e) {
-    
+
   }
-  
+
   collectImages();
   collectActive = false;
-  
+
   var lst = imgList.slice();
-  
+
   var total = lst.length;
   var zip = new JSZip();
   // Create folders
   var success = zip.folder("success");
   var error = zip.folder("error_thumbnails");
 
+
+  document.body.innerHTML = '<h1><span id="counter">' + (total-lst.length) + "</span>/" + total + " downloaded</h1>" + '</div><progress id="status"></progress><br><progress id="total" value="0" max="'+ total + '"></progress><pre id="statusmessage"></pre>';
+  let pre = document.getElementById('statusmessage');
+  let statusbar = document.getElementById('status');
+  let totalbar = document.getElementById('total');
+  let h1 = document.getElementById('counter');
+
   (async function work() {
     document.title = (total-lst.length) + "/" + total + " downloaded";
-    document.body.innerHTML = "<h1>" + (total-lst.length) + "/" + total + " downloaded</h1>" + '</div><progress value="' + (total-lst.length) + '" max="'+ total + '"></progress>';
-    
+    h1.innerHTML = totalbar.value = total-lst.length;
+    statusbar.removeAttribute('value');
+    statusbar.removeAttribute('max');
+
     if(lst.length == 0) {
       document.title = "Generating zip file...";
       document.body.innerHTML = "<h1>Generating zip file...</h1>";
     }
     if(lst.length > 0) {
       let urls = lst.pop();
+      let name = urls[0].split("/").pop();
+      pre.innerHTML = name;
       GM.xmlHttpRequest({
         method: "GET",
         url: urls[0],
@@ -124,15 +139,20 @@ function downloadOriginals() {
             }
           } else {
             // Save file to zip
-            let name = urls[0].split("/").pop();
             if(urls.length == 2) {
               success.file(name, response.response);
             } else {
               error.file(name, response.response);
             }
           }
-          
+
           work();
+        },
+        onprogress: function(progress) {
+          try {
+            statusbar.max = progress.total;
+            statusbar.value = progress.loaded;
+          } catch(e) {}
         }
       });
     } else {
@@ -140,16 +160,16 @@ function downloadOriginals() {
       var zipfilename;
       try {
         var d = new Date();
-        
-        zipfilename = "" + d.getFullYear() + "-" + ((d.getMonth() + 1)>9?"":"0") + (d.getMonth() + 1) + "-" + (d.getDate()>9?"":"0") + d.getDate() + 
+
+        zipfilename = "" + d.getFullYear() + "-" + ((d.getMonth() + 1)>9?"":"0") + (d.getMonth() + 1) + "-" + (d.getDate()>9?"":"0") + d.getDate() +
                      "_" + (d.getHours()>9?"":"0") + d.getHours() + "-" + (d.getMinutes()>9?"":"0") + d.getMinutes() + "_" + userName + "_" + boardName
-        
+
       } catch(e) {
         zipfilename = "images";
       }
       zipfilename += ".zip";
-      
-      
+
+
       var content = await zip.generateAsync({type:"blob"});
       zip = null;
       var h = document.createElement("h1");
@@ -168,8 +188,8 @@ function addButton() {
   if(document.querySelector(".downloadoriginal123button")) {
     return;
   }
-  
-  if(document.querySelector(".boardHeaderWrapper") && document.querySelectorAll(".gridCentered .Pin .pinWrapper img").length) {
+
+  if(document.querySelector(".boardHeaderWrapper") && document.querySelectorAll('.gridCentered a[href^="/pin/"] img').length) {
     var button = document.createElement("button");
     button.type = "button";
     button.setAttribute("class","downloadoriginal123button BoardFollowButton Button FollowButton Module boardFollowUnfollowButton btn hasText notNavigatable primary rounded");
