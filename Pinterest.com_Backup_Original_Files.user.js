@@ -3,9 +3,8 @@
 // @description Download all original images from your Pinterest.com profile. Creates an entry in the Greasemonkey menu, just go to one of your boards, scroll down to the last image and click the option in the menu.
 // @namespace   cuzi
 // @license     MIT
-// @version     14
-// @include     https://*pinterest.com/*
-// @include     https://*pinterest.de/*
+// @version     15
+// @include     https://*.pinterest.*
 // @grant       GM_xmlhttpRequest
 // @grant       GM_registerMenuCommand
 // @grant       GM.xmlHttpRequest
@@ -14,7 +13,6 @@
 // @connect     pinterest.com
 // @connect     pinterest.de
 // @connect     pinimg.com
-// @updateURL   https://openuserjs.org/meta/cuzi/Pinterest.com_Backup_Original_Files.meta.js
 // ==/UserScript==
 
 
@@ -32,8 +30,8 @@ function main() {
 var imgList = [];
 var url = document.location.href;
 var collectActive = true;
-var boardName;
-var userName;
+var boardName = "";
+var userName = "";
 
 function collectImages() {
   if(!collectActive) return;
@@ -88,10 +86,22 @@ function collectImages() {
 
 function downloadOriginals() {
   try {
-    boardName = document.querySelector(".boardName").innerText.replace(/[^a-z0-9]/gi, '_');
-    userName = document.location.href.match(/\.(com|de)\/(.*?)\//)[2].replace(/[^a-z0-9]/gi, '_');
+    boardName = document.querySelector('h1').textContent.trim().replace(/[^a-z0-9]/gi, '_');
+  } catch(e1) {
+      try {
+         boardName = document.location.pathname.replace(/^\//, '').replace(/\/$/, '').split('/').pop().replace(/[^a-z0-9]/gi, '_');
+      } catch(e2) {
+          boardName = 'board-' + Math.random()
+      }
+  }
+  try {
+    userName = document.location.href.match(/\.(\w{2,3})\/(.*?)\//)[2].replace(/[^a-z0-9]/gi, '_');
   } catch(e) {
-
+      try {
+         userName = document.location.pathname.replace(/^\//, '').replace(/\/$/, '').split('/').shift().replace(/[^a-z0-9]/gi, '_');
+      } catch(e2) {
+          userName = 'user'
+      }
   }
 
   collectImages();
@@ -105,7 +115,7 @@ function downloadOriginals() {
   var success = zip.folder("success");
   var error = zip.folder("error_thumbnails");
 
-
+  document.body.style.padding = '3%'
   document.body.innerHTML = '<h1><span id="counter">' + (total-lst.length) + "</span>/" + total + " downloaded</h1>" + '</div><progress id="status"></progress><br><progress id="total" value="0" max="'+ total + '"></progress><pre id="statusmessage"></pre>';
   let pre = document.getElementById('statusmessage');
   let statusbar = document.getElementById('status');
@@ -189,19 +199,32 @@ function addButton() {
     return;
   }
 
-  if(document.querySelector(".boardHeaderWrapper") && document.querySelectorAll('.gridCentered a[href^="/pin/"] img').length) {
-    var button = document.createElement("button");
+  if(document.querySelector('[data-test-id="board-header"]') && document.querySelectorAll('.gridCentered a[href^="/pin/"] img').length) {
+    var button = document.createElement("div");
     button.type = "button";
-    button.setAttribute("class","downloadoriginal123button BoardFollowButton Button FollowButton Module boardFollowUnfollowButton btn hasText notNavigatable primary rounded");
-    button.setAttribute("style","margin-left:10px;");
-    button.innerHTML = '<span class="buttonText">Download originals</span>';
+    button.classList.add('downloadoriginal123button')
+    button.setAttribute("style",`
+position: absolute;
+display: block;
+background: white;
+border: none;
+padding: 5px;
+text-align: center;
+cursor:pointer;
+`);
+    button.innerHTML = `
+<div class="buttonText" style="background: #efefef;border: #efefef 1px solid;border-radius: 24px;padding: 5px;font-size: xx-large;color: #111;width: 62px; height: 58px;">⭳</div>
+<div style="font-weight: 700;color: #111;font-size: 12px;">Download<br>originals</div>
+`;
     button.addEventListener("click", main);
-    if(document.querySelector(".infoBar *[data-test-id='board-follow-button']")) {
-      document.querySelector(".infoBar *[data-test-id='board-follow-button']").parentNode.parentNode.parentNode.appendChild(button);
-    } else if(document.querySelector(".boardHeaderWrapper")) {
-      document.querySelector(".boardHeaderWrapper").appendChild(button);
-    } else {
-      document.querySelector(".boardPageContentWrapper").insertBefore(button, document.querySelector(".boardPageContentWrapper").firstChild);
+    document.querySelector('[data-test-id="board-header"]').appendChild(button);
+    try {
+      const buttons = document.querySelectorAll('[role="button"] a[href*="/more-ideas/"],[data-test-id="board-header"] [role="button"]')
+      const rect = buttons[buttons.length - 1].getBoundingClientRect()
+      button.style.top = rect.top - 2 + 'px'
+      button.style.left = rect.left - rect.width - 18 + 'px'
+    } catch(e) {
+      console.error(e)
     }
   }
 }
@@ -3677,8 +3700,8 @@ exports.prepareContent = function(name, inputData, isBinary, isOptimizedBinarySt
 
     // if inputData is already a promise, this flatten it.
     var promise = external.Promise.resolve(inputData).then(function(data) {
-        
-        
+
+
         var isBlob = support.blob && (data instanceof Blob || ['[object File]', '[object Blob]'].indexOf(Object.prototype.toString.call(data)) !== -1);
 
         if (isBlob && typeof FileReader !== "undefined") {
@@ -4537,7 +4560,7 @@ $export.P = 8;   // proto
 $export.B = 16;  // bind
 $export.W = 32;  // wrap
 $export.U = 64;  // safe
-$export.R = 128; // real proto method for `library` 
+$export.R = 128; // real proto method for `library`
 module.exports = $export;
 },{"./_core":40,"./_ctx":41,"./_global":46,"./_hide":47}],45:[function(require,module,exports){
 module.exports = function(exec){
