@@ -13,7 +13,7 @@ Simply go to one of your boards, scroll down to the last image and click the dow
 
 The images will be downloaded and packed into a single Zip file file for you.
 
-![Screenshot](https://greasyfork.org/system/screenshots/screenshots/000/005/289/original/screen.jpg)
+![Screenshot](screen.png)
 
 Works with Firefox and Chrome (via [Tampermonkey](http://tampermonkey.net/))
 
