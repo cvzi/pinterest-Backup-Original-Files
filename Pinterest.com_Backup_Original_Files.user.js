@@ -3,7 +3,7 @@
 // @description Download all original images from your Pinterest.com profile. Creates an entry in the Greasemonkey menu, just go to one of your boards, scroll down to the last image and click the option in the menu.
 // @namespace   cuzi
 // @license     MIT
-// @version     16
+// @version     17
 // @include     https://*.pinterest.*
 // @grant       GM_xmlhttpRequest
 // @grant       GM_registerMenuCommand
@@ -15,6 +15,9 @@
 // @connect     pinimg.com
 // ==/UserScript==
 
+
+// Time to wait between every scroll to the bottom (in milliseconds)
+const scrollPause = 1000
 
 let scrollIV = null
 let lastScrollY = null
@@ -38,7 +41,7 @@ function prepareForDownloading () {
   button.querySelector('.buttonText').style.backgroundColor = '#11ac55'
 
   document.scrollingElement.scrollTo(0, document.scrollingElement.scrollHeight)
-  scrollIV = window.setInterval(scrollDown, 2000)
+  scrollIV = window.setInterval(scrollDown, scrollPause)
 }
 
 function scrollDown () {
@@ -48,7 +51,7 @@ function scrollDown () {
     downloadOriginals()
   } else {
     console.log('noChangesFor <= 2')
-    document.scrollingElement.scrollTo(0, document.scrollingElement.scrollHeight)
+    document.scrollingElement.scrollTo(0, document.scrollingElement.scrollTop + 500)
     if (document.scrollingElement.scrollTop === lastScrollY) {
       noChangesFor++
       console.log('noChangesFor++')
