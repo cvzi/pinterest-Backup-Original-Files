@@ -3,7 +3,7 @@
 // @description Download all original images from your Pinterest.com profile. Creates an entry in the Greasemonkey menu, just go to one of your boards, scroll down to the last image and click the option in the menu.
 // @namespace   cuzi
 // @license     MIT
-// @version     15
+// @version     16
 // @include     https://*.pinterest.*
 // @grant       GM_xmlhttpRequest
 // @grant       GM_registerMenuCommand
@@ -16,194 +16,118 @@
 // ==/UserScript==
 
 
-function main() {
-  window.scrollTo(0, document.body.scrollHeight);
-  if(confirm("Did you scroll down to the last image on the page?\nOnly images that were already loaded can be downloaded!")) {
-    downloadOriginals();
+let scrollIV = null
+let lastScrollY = null
+let noChangesFor = 0
+
+function prepareForDownloading () {
+  if (scrollIV !== null) {
+    window.clearInterval(scrollIV)
+    downloadOriginals()
+    return
+  }
+
+  if (!window.confirm('The script needs to scroll down to the end of the page.It will start downloading once the end is reached.\n\nOnly images that are already visible can be downloaded.\n\nPress the download button again to stop scrolling')) {
+    return
+  }
+
+  const button = document.querySelector('.downloadoriginal123button')
+  button.style.position = 'fixed'
+  button.style.top = '100px'
+  button.style.zIndex = 100
+  button.querySelector('.buttonText').style.backgroundColor = '#11ac55'
+
+  document.scrollingElement.scrollTo(0, document.scrollingElement.scrollHeight)
+  scrollIV = window.setInterval(scrollDown, 2000)
+}
+
+function scrollDown () {
+  if (noChangesFor > 2) {
+    console.log('noChangesFor > 2')
+    window.clearInterval(scrollIV)
+    downloadOriginals()
   } else {
-    alert("Scroll down to the last image and try again!");
-    window.scrollTo(0, document.body.scrollHeight);
-  }
-}
-
-
-var imgList = [];
-var url = document.location.href;
-var collectActive = true;
-var boardName = "";
-var userName = "";
-
-function collectImages() {
-  if(!collectActive) return;
-  if(url != document.location.href) {
-    // Reset on new page
-    url = document.location.href;
-    imgList = [];
-  }
-
-  let imgs = document.querySelectorAll('.gridCentered a[href^="/pin/"] img');
-  for(let i = 0; i < imgs.length; i++) {
-    if (imgs[i].clientWidth < 100) {
-      // Skip small images, these are user profile photos
-      continue;
-    }
-    let entry = [imgs[i].src.replace(/\/\d+x\//,"/originals/"),imgs[i].src];
-
-    if(imgs[i].srcset) {
-      // e.g. srcset="https://i-h2.pinimg.com/236x/15/87/ae/abcdefg1234.jpg 1x, https://i-h2.pinimg.com/474x/15/87/ae/abcdefg1234.jpg 2x, https://i-h2.pinimg.com/736x/15/87/ae/abcdefg1234.jpg 3x, https://i-h2.pinimg.com/originals/15/87/ae/abcdefg1234.png 4x"
-
-      let goodUrl = false;
-      let quality = -1;
-      let srcset = imgs[i].srcset.split(", ");
-      for(let j = 0; j < srcset.length; j++) {
-        let pair = srcset[j].split(" ");
-        let q = parseInt(pair[1].replace("x"))
-        if(q > quality) {
-          goodUrl = pair[0];
-          quality = q;
-        }
-        if(pair[0].indexOf("/originals/") != -1) {
-          break;
-        }
-      }
-      if(goodUrl && quality != -1) {
-        entry[0] = goodUrl;
-      }
-    }
-
-    let exists = false;
-    for(let j = 0; j < imgList.length; j++) {
-      if(imgList[j][0] == entry[0] && imgList[j][1] == entry[1]) {
-        exists = true;
-        break;
-      }
-    }
-    if(!exists) {
-      imgList.push([entry[0], entry[1]]);
-    }
-  }
-}
-
-function downloadOriginals() {
-  try {
-    boardName = document.querySelector('h1').textContent.trim().replace(/[^a-z0-9]/gi, '_');
-  } catch(e1) {
-      try {
-         boardName = document.location.pathname.replace(/^\//, '').replace(/\/$/, '').split('/').pop().replace(/[^a-z0-9]/gi, '_');
-      } catch(e2) {
-          boardName = 'board-' + Math.random()
-      }
-  }
-  try {
-    userName = document.location.href.match(/\.(\w{2,3})\/(.*?)\//)[2].replace(/[^a-z0-9]/gi, '_');
-  } catch(e) {
-      try {
-         userName = document.location.pathname.replace(/^\//, '').replace(/\/$/, '').split('/').shift().replace(/[^a-z0-9]/gi, '_');
-      } catch(e2) {
-          userName = 'user'
-      }
-  }
-
-  collectImages();
-  collectActive = false;
-
-  var lst = imgList.slice();
-
-  var total = lst.length;
-  var zip = new JSZip();
-  // Create folders
-  var success = zip.folder("success");
-  var error = zip.folder("error_thumbnails");
-
-  document.body.style.padding = '3%'
-  document.body.innerHTML = '<h1><span id="counter">' + (total-lst.length) + "</span>/" + total + " downloaded</h1>" + '</div><progress id="status"></progress><br><progress id="total" value="0" max="'+ total + '"></progress><pre id="statusmessage"></pre>';
-  let pre = document.getElementById('statusmessage');
-  let statusbar = document.getElementById('status');
-  let totalbar = document.getElementById('total');
-  let h1 = document.getElementById('counter');
-
-  (async function work() {
-    document.title = (total-lst.length) + "/" + total + " downloaded";
-    h1.innerHTML = totalbar.value = total-lst.length;
-    statusbar.removeAttribute('value');
-    statusbar.removeAttribute('max');
-
-    if(lst.length == 0) {
-      document.title = "Generating zip file...";
-      document.body.innerHTML = "<h1>Generating zip file...</h1>";
-    }
-    if(lst.length > 0) {
-      let urls = lst.pop();
-      let name = urls[0].split("/").pop();
-      pre.innerHTML = name;
-      GM.xmlHttpRequest({
-        method: "GET",
-        url: urls[0],
-        responseType : "arraybuffer",
-        onload: function(response) {
-          let s = String.fromCharCode.apply(null, new Uint8Array(response.response.slice(0,125)));
-          if(s.indexOf("<Error>") != -1) {
-            // Download thumbnail to error folder
-            if(urls.length == 2) {
-              lst.push([urls[1]]);
-            }
-          } else {
-            // Save file to zip
-            if(urls.length == 2) {
-              success.file(name, response.response);
-            } else {
-              error.file(name, response.response);
-            }
-          }
-
-          work();
-        },
-        onprogress: function(progress) {
-          try {
-            statusbar.max = progress.total;
-            statusbar.value = progress.loaded;
-          } catch(e) {}
-        }
-      });
+    console.log('noChangesFor <= 2')
+    document.scrollingElement.scrollTo(0, document.scrollingElement.scrollHeight)
+    if (document.scrollingElement.scrollTop === lastScrollY) {
+      noChangesFor++
+      console.log('noChangesFor++')
     } else {
-      // Done. Open ZIP file
-      var zipfilename;
-      try {
-        var d = new Date();
-
-        zipfilename = "" + d.getFullYear() + "-" + ((d.getMonth() + 1)>9?"":"0") + (d.getMonth() + 1) + "-" + (d.getDate()>9?"":"0") + d.getDate() +
-                     "_" + (d.getHours()>9?"":"0") + d.getHours() + "-" + (d.getMinutes()>9?"":"0") + d.getMinutes() + "_" + userName + "_" + boardName
-
-      } catch(e) {
-        zipfilename = "images";
-      }
-      zipfilename += ".zip";
-
-
-      var content = await zip.generateAsync({type:"blob"});
-      zip = null;
-      var h = document.createElement("h1");
-      h.appendChild(document.createTextNode("Click here to Download"));
-      h.style = "cursor:pointer; color:blue; background:white; text-decoration:underline";
-      document.body.appendChild(h);
-      h.addEventListener("click",function() {
-        saveAs(content, zipfilename);
-      });
-      saveAs(content, zipfilename);
+      noChangesFor = 0
+      console.log('noChangesFor = 0')
     }
-  })();
+  }
+  lastScrollY = document.scrollingElement.scrollTop
 }
 
-function addButton() {
-  if(document.querySelector(".downloadoriginal123button")) {
-    return;
+let imgList = []
+let url = document.location.href
+let collectActive = true
+let boardName = ''
+let userName = ''
+
+function collectImages () {
+  if (!collectActive) return
+  if (url !== document.location.href) {
+  // Reset on new page
+    url = document.location.href
+    imgList = []
   }
 
-  if(document.querySelector('[data-test-id="board-header"]') && document.querySelectorAll('.gridCentered a[href^="/pin/"] img').length) {
-    var button = document.createElement("div");
-    button.type = "button";
+  const imgs = document.querySelectorAll('.gridCentered a[href^="/pin/"] img')
+  for (let i = 0; i < imgs.length; i++) {
+    if (imgs[i].clientWidth < 100) {
+    // Skip small images, these are user profile photos
+      continue
+    }
+    const entry = [imgs[i].src.replace(/\/\d+x\//, '/originals/'), imgs[i].src]
+
+    if (imgs[i].srcset) {
+    // e.g. srcset="https://i-h2.pinimg.com/236x/15/87/ae/abcdefg1234.jpg 1x, https://i-h2.pinimg.com/474x/15/87/ae/abcdefg1234.jpg 2x, https://i-h2.pinimg.com/736x/15/87/ae/abcdefg1234.jpg 3x, https://i-h2.pinimg.com/originals/15/87/ae/abcdefg1234.png 4x"
+
+      let goodUrl = false
+      let quality = -1
+      const srcset = imgs[i].srcset.split(', ')
+      for (let j = 0; j < srcset.length; j++) {
+        const pair = srcset[j].split(' ')
+        const q = parseInt(pair[1].replace('x'))
+        if (q > quality) {
+          goodUrl = pair[0]
+          quality = q
+        }
+        if (pair[0].indexOf('/originals/') !== -1) {
+          break
+        }
+      }
+      if (goodUrl && quality !== -1) {
+        entry[0] = goodUrl
+      }
+    }
+
+    let exists = false
+    for (let j = 0; j < imgList.length; j++) {
+      if (imgList[j][0] === entry[0] && imgList[j][1] === entry[1]) {
+        exists = true
+        break
+      }
+    }
+    if (!exists) {
+      imgList.push([entry[0], entry[1]])
+    }
+  }
+}
+
+
+function addButton () {
+  if (document.querySelector('.downloadoriginal123button')) {
+    return
+  }
+
+  if (document.querySelector('[data-test-id="board-header"]') && document.querySelectorAll('.gridCentered a[href^="/pin/"] img').length) {
+    const button = document.createElement('div')
+    button.type = 'button'
     button.classList.add('downloadoriginal123button')
-    button.setAttribute("style",`
+    button.setAttribute('style', `
 position: absolute;
 display: block;
 background: white;
@@ -211,38 +135,40 @@ border: none;
 padding: 5px;
 text-align: center;
 cursor:pointer;
-`);
+`)
     button.innerHTML = `
-<div class="buttonText" style="background: #efefef;border: #efefef 1px solid;border-radius: 24px;padding: 5px;font-size: xx-large;color: #111;width: 62px; height: 58px;">⭳</div>
+<div class="buttonText" style="background: #efefef;border: #efefef 1px solid;border-radius: 24px;padding: 5px;font-size: xx-large;color: #111;width: 62px; height: 58px;">\u2B73</div>
 <div style="font-weight: 700;color: #111;font-size: 12px;">Download<br>originals</div>
-`;
-    button.addEventListener("click", main);
-    document.querySelector('[data-test-id="board-header"]').appendChild(button);
+`
+    button.addEventListener('click', prepareForDownloading)
+    document.querySelector('[data-test-id="board-header"]').appendChild(button)
     try {
       const buttons = document.querySelectorAll('[role="button"] a[href*="/more-ideas/"],[data-test-id="board-header"] [role="button"]')
       const rect = buttons[buttons.length - 1].getBoundingClientRect()
       button.style.top = rect.top - 2 + 'px'
       button.style.left = rect.left - rect.width - 18 + 'px'
-    } catch(e) {
-      console.error(e)
+    } catch (e) {
+      console.warn(e)
+      try {
+        const title = document.querySelector('h1')
+        const rect = title.getBoundingClientRect()
+        button.style.top = rect.top - 2 + 'px'
+        button.style.left = rect.left - 120 + 'px'
+      } catch (e) {
+        console.warn(e)
+      }
     }
   }
 }
 
-
-(function() {
-  GM.registerMenuCommand("Pinterest.com - backup originals",main);
-  addButton();
-  window.setInterval(addButton,1000);
-  window.setInterval(collectImages, 200);
-})();
+GM.registerMenuCommand('Pinterest.com - backup originals', prepareForDownloading)
+addButton()
+window.setInterval(addButton, 1000)
+window.setInterval(collectImages, 200)
 
 
-
-
-
-
-
+function downloadOriginals () {
+let JSZip
 
 /*!
 
@@ -256,7 +182,7 @@ JSZip uses the library pako released under the MIT license :
 https://github.com/nodeca/pako/blob/master/LICENSE
 */
 
-(function(f){if(typeof exports==="object"&&typeof module!=="undefined"){module.exports=f()}else if(typeof define==="function"&&define.amd){define([],f)}else{var g;if(typeof window!=="undefined"){g=window}else if(typeof global!=="undefined"){g=global}else if(typeof self!=="undefined"){g=self}else{g=this}g.JSZip = f()}})(function(){var define,module,exports;return (function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof require=="function"&&require;if(!u&&a)return a(o,!0);if(i)return i(o,!0);var f=new Error("Cannot find module '"+o+"'");throw f.code="MODULE_NOT_FOUND",f}var l=n[o]={exports:{}};t[o][0].call(l.exports,function(e){var n=t[o][1][e];return s(n?n:e)},l,l.exports,e,t,n,r)}return n[o].exports}var i=typeof require=="function"&&require;for(var o=0;o<r.length;o++)s(r[o]);return s})({1:[function(require,module,exports){
+(function(f){if(typeof exports==="object"&&typeof module!=="undefined"){module.exports=f()}else if(typeof define==="function"&&define.amd){define([],f)}else{var g;if(typeof window!=="undefined"){g=window}else if(typeof global!=="undefined"){g=global}else if(typeof self!=="undefined"){g=self}else{g=this}JSZip = f()}})(function(){var define,module,exports;return (function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof require=="function"&&require;if(!u&&a)return a(o,!0);if(i)return i(o,!0);var f=new Error("Cannot find module '"+o+"'");throw f.code="MODULE_NOT_FOUND",f}var l=n[o]={exports:{}};t[o][0].call(l.exports,function(e){var n=t[o][1][e];return s(n?n:e)},l,l.exports,e,t,n,r)}return n[o].exports}var i=typeof require=="function"&&require;for(var o=0;o<r.length;o++)s(r[o]);return s})({1:[function(require,module,exports){
 'use strict';
 var utils = require('./utils');
 var support = require('./support');
@@ -12082,4 +12008,121 @@ if (typeof module !== "undefined" && module.exports) {
   define("FileSaver.js", function() {
     return saveAs;
   });
+}
+
+
+
+
+
+  // ############# downloadOriginals () ##############
+
+  try {
+    boardName = document.querySelector('h1').textContent.trim().replace(/[^a-z0-9]/gi, '_')
+  } catch (e1) {
+    try {
+      boardName = document.location.pathname.replace(/^\//, '').replace(/\/$/, '').split('/').pop().replace(/[^a-z0-9]/gi, '_')
+    } catch (e2) {
+      boardName = 'board-' + Math.random()
+    }
+  }
+  try {
+    userName = document.location.href.match(/\.(\w{2,3})\/(.*?)\//)[2].replace(/[^a-z0-9]/gi, '_')
+  } catch (e) {
+    try {
+      userName = document.location.pathname.replace(/^\//, '').replace(/\/$/, '').split('/').shift().replace(/[^a-z0-9]/gi, '_')
+    } catch (e2) {
+      userName = 'user'
+    }
+  }
+
+  collectImages()
+  collectActive = false
+
+  const lst = imgList.slice()
+
+
+  const total = lst.length
+  let zip = new JSZip()
+  // Create folders
+  const success = zip.folder('success')
+  const error = zip.folder('error_thumbnails')
+
+  document.body.style.padding = '3%'
+  document.body.innerHTML = '<h1><span id="counter">' + (total - lst.length) + '</span>/' + total + ' downloaded</h1>' + '</div><progress id="status"></progress><br><progress id="total" value="0" max="' + total + '"></progress><pre id="statusmessage"></pre>'
+  document.scrollingElement.scrollTo(0, 0)
+  const pre = document.getElementById('statusmessage')
+  const statusbar = document.getElementById('status')
+  const totalbar = document.getElementById('total')
+  const h1 = document.getElementById('counter');
+
+  (async function work () {
+    document.title = (total - lst.length) + '/' + total + ' downloaded'
+    h1.innerHTML = totalbar.value = total - lst.length
+    statusbar.removeAttribute('value')
+    statusbar.removeAttribute('max')
+
+    if (lst.length === 0) {
+      document.title = 'Generating zip file...'
+      document.body.innerHTML = '<h1>Generating zip file...</h1>'
+    }
+    if (lst.length > 0) {
+      const urls = lst.pop()
+      const name = urls[0].split('/').pop()
+      pre.innerHTML = name
+      GM.xmlHttpRequest({
+        method: 'GET',
+        url: urls[0],
+        responseType: 'arraybuffer',
+        onload: function (response) {
+          const s = String.fromCharCode.apply(null, new Uint8Array(response.response.slice(0, 125)))
+          if (s.indexOf('<Error>') !== -1) {
+          // Download thumbnail to error folder
+            if (urls.length === 2) {
+              lst.push([urls[1]])
+            }
+          } else {
+          // Save file to zip
+            if (urls.length === 2) {
+              success.file(name, response.response)
+            } else {
+              error.file(name, response.response)
+            }
+          }
+
+          work()
+        },
+        onprogress: function (progress) {
+          try {
+            statusbar.max = progress.total
+            statusbar.value = progress.loaded
+          } catch (e) {}
+        }
+      })
+    } else {
+    // Done. Open ZIP file
+      let zipfilename
+      try {
+        const d = new Date()
+
+        zipfilename = '' + d.getFullYear() + '-' + ((d.getMonth() + 1) > 9 ? '' : '0') + (d.getMonth() + 1) + '-' + (d.getDate() > 9 ? '' : '0') + d.getDate() +
+                   '_' + (d.getHours() > 9 ? '' : '0') + d.getHours() + '-' + (d.getMinutes() > 9 ? '' : '0') + d.getMinutes() + '_' + userName + '_' + boardName
+      } catch (e) {
+        zipfilename = 'images'
+      }
+      zipfilename += '.zip'
+
+      const content = await zip.generateAsync({ type: 'blob' })
+      zip = null
+      const h = document.createElement('h1')
+      h.appendChild(document.createTextNode('Click here to Download'))
+      h.style = 'cursor:pointer; color:blue; background:white; text-decoration:underline'
+      document.body.appendChild(h)
+      h.addEventListener('click', function () {
+        saveAs(content, zipfilename)
+      })
+      saveAs(content, zipfilename)
+    }
+  })()
+
+
 }
