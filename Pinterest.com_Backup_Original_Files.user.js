@@ -3,7 +3,7 @@
 // @description Download all original images from your Pinterest.com profile. Creates an entry in the Greasemonkey menu, just go to one of your boards, scroll down to the last image and click the option in the menu.
 // @namespace   cuzi
 // @license     MIT
-// @version     17
+// @version     18
 // @include     https://*.pinterest.*
 // @grant       GM_xmlhttpRequest
 // @grant       GM_registerMenuCommand
@@ -17,7 +17,7 @@
 
 
 // Time to wait between every scroll to the bottom (in milliseconds)
-const scrollPause = 1000
+const scrollPause = 700
 
 let scrollIV = null
 let lastScrollY = null
@@ -25,26 +25,38 @@ let noChangesFor = 0
 
 function prepareForDownloading () {
   if (scrollIV !== null) {
+    return
+  }
+
+  if (!window.confirm('The script needs to scroll down to the end of the page. It will start downloading once the end is reached.\n\nOnly images that are already visible can be downloaded.\n\n\u2757 Keep this tab open (visible) \u2757')) {
+    return
+  }
+
+  const div = document.querySelector('.downloadoriginal123button')
+  div.style.position = 'fixed'
+  div.style.top = '30%'
+  div.style.zIndex = 100
+  div.innerHTML = 'Collecting images...<br>'
+
+  const startDownloadButton = div.appendChild(document.createElement('button'))
+  startDownloadButton.appendChild(document.createTextNode('Stop scrolling & start downloading'))
+  startDownloadButton.addEventListener('click', function() {
     window.clearInterval(scrollIV)
     downloadOriginals()
-    return
-  }
+  })
 
-  if (!window.confirm('The script needs to scroll down to the end of the page.It will start downloading once the end is reached.\n\nOnly images that are already visible can be downloaded.\n\nPress the download button again to stop scrolling')) {
-    return
-  }
-
-  const button = document.querySelector('.downloadoriginal123button')
-  button.style.position = 'fixed'
-  button.style.top = '100px'
-  button.style.zIndex = 100
-  button.querySelector('.buttonText').style.backgroundColor = '#11ac55'
+  const statusImageCollector = div.appendChild(document.createElement('div'))
+  statusImageCollector.setAttribute('id', 'statusImageCollector')
 
   document.scrollingElement.scrollTo(0, document.scrollingElement.scrollHeight)
   scrollIV = window.setInterval(scrollDown, scrollPause)
 }
 
 function scrollDown () {
+  if (document.hidden) {
+    // Tab is hidden, don't do anyhting
+    return
+  }
   if (noChangesFor > 2) {
     console.log('noChangesFor > 2')
     window.clearInterval(scrollIV)
@@ -118,6 +130,11 @@ function collectImages () {
       imgList.push([entry[0], entry[1]])
     }
   }
+  const statusImageCollector = document.getElementById('statusImageCollector')
+  if (statusImageCollector) {
+    statusImageCollector.innerHTML = `Collected ${imgList.length} images`
+  }
+
 }
 
 
