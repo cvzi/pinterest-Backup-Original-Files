@@ -13,6 +13,9 @@ Simply go to one of your boards, scroll down to the last image and click the dow
 
 The images will be downloaded and packed into a single Zip file file for you.
 
+[![Say Thanks!](https://img.shields.io/badge/say-thanks-ff69b4.svg?style=for-the-badge)](https://saythanks.io/to/cvzi)
+
+
 ![Screenshot](screen.png)
 
 Works with Firefox and Chrome (via [Tampermonkey](http://tampermonkey.net/))
