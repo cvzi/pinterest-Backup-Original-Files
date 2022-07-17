@@ -3,15 +3,15 @@
 // @description Download all original images from your Pinterest.com profile. Creates an entry in the Greasemonkey menu, just go to one of your boards, scroll down to the last image and click the option in the menu.
 // @namespace   cuzi
 // @license     MIT
-// @version     19.0.0
+// @version     19.0.1
 // @include     https://*.pinterest.*
 // @grant       GM_xmlhttpRequest
 // @grant       GM_registerMenuCommand
 // @grant       GM.xmlHttpRequest
 // @grant       GM.registerMenuCommand
 // @require     https://greasemonkey.github.io/gm4-polyfill/gm4-polyfill.js
-// @require     https://github.com/Stuk/jszip/raw/v3.9.1/dist/jszip.min.js
-// @require     https://github.com/eligrey/FileSaver.js/raw/master/dist/FileSaver.min.js
+// @require     https://cdn.jsdelivr.net/npm/jszip@3.9.1/dist/jszip.min.js
+// @require     https://cdn.jsdelivr.net/npm/file-saver@2.0.5/dist/FileSaver.min.js
 // @connect     pinterest.com
 // @connect     pinterest.de
 // @connect     pinimg.com
