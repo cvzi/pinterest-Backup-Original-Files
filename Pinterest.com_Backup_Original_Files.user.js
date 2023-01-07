@@ -3,7 +3,7 @@
 // @description Download all original images from your Pinterest.com profile. Creates an entry in the Greasemonkey menu, just go to one of your boards, scroll down to the last image and click the option in the menu.
 // @namespace   cuzi
 // @license     MIT
-// @version     19.0.2
+// @version     19.0.3
 // @match       https://*.pinterest.com/*
 // @match       https://*.pinterest.at/*
 // @match       https://*.pinterest.ca/*
