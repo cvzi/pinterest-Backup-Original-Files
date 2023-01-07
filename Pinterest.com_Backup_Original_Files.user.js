@@ -225,7 +225,7 @@ function addButton () {
     return
   }
 
-  if (document.querySelector('[data-test-id="board-header"]') && document.querySelectorAll('.gridCentered a[href^="/pin/"] img').length) {
+  if (document.querySelector('[data-test-id="board-tools"],[data-test-id="board-header"]') && document.querySelectorAll('.gridCentered a[href^="/pin/"] img').length) {
     const button = document.createElement('div')
     button.type = 'button'
     button.classList.add('downloadoriginal123button')
@@ -243,7 +243,7 @@ cursor:pointer;
 <div style="font-weight: 700;color: #111;font-size: 12px;">Download<br>originals</div>
 `
     button.addEventListener('click', prepareForDownloading)
-    document.querySelector('[data-test-id="board-header"]').appendChild(button)
+    document.querySelector('[data-test-id="board-tools"],[data-test-id="board-header"]').appendChild(button)
     try {
       const buttons = document.querySelectorAll('[role="button"] a[href*="/more-ideas/"],[data-test-id="board-header"] [role="button"]')
       const rect = buttons[buttons.length - 1].getBoundingClientRect()
