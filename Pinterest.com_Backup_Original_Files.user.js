@@ -3,7 +3,7 @@
 // @description Download all original images from your Pinterest.com profile. Creates an entry in the Greasemonkey menu, just go to one of your boards, scroll down to the last image and click the option in the menu.
 // @namespace   cuzi
 // @license     MIT
-// @version     19.0.3
+// @version     19.0.4
 // @match       https://*.pinterest.com/*
 // @match       https://*.pinterest.at/*
 // @match       https://*.pinterest.ca/*
@@ -134,7 +134,7 @@ function collectImages () {
     entryList = []
   }
 
-  const imgs = document.querySelectorAll('.gridCentered a[href^="/pin/"] img')
+  const imgs = document.querySelectorAll('[data-test-id="board-feed"] a[href^="/pin/"] img')
   for (let i = 0; i < imgs.length; i++) {
     if (imgs[i].clientWidth < 100) {
       // Skip small images, these are user profile photos
@@ -225,7 +225,7 @@ function addButton () {
     return
   }
 
-  if (document.querySelector('[data-test-id="board-tools"],[data-test-id="board-header"]') && document.querySelectorAll('.gridCentered a[href^="/pin/"] img').length) {
+  if (document.querySelector('[data-test-id="board-tools"],[data-test-id="board-header"]') && document.querySelectorAll('[data-test-id="board-feed"] a[href^="/pin/"] img').length) {
     const button = document.createElement('div')
     button.type = 'button'
     button.classList.add('downloadoriginal123button')
