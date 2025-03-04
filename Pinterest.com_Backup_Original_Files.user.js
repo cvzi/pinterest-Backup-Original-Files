@@ -48,6 +48,8 @@ const scrollPause = 1000
 let scrollIV = null
 let lastScrollY = null
 let noChangesFor = 0
+let lastImageListLength = -1
+let noImageListLengthChangesFor = 0
 
 function prepareForDownloading () {
   if (scrollIV !== null) {
@@ -105,6 +107,17 @@ function scrollDown () {
       noChangesFor = 0
       console.log('noChangesFor = 0')
     }
+    if (entryList.length !== lastImageListLength) {
+      lastImageListLength = entryList.length
+      noImageListLengthChangesFor = 0
+    } else {
+      console.log('noImageListLengthChangesFor =', noImageListLengthChangesFor)
+      noImageListLengthChangesFor++
+      if (noImageListLengthChangesFor > 5) {
+        window.clearInterval(scrollIV)
+        window.setTimeout(downloadOriginals, 1000)
+      }
+    }
   }
   lastScrollY = document.scrollingElement.scrollTop
 }
@@ -134,7 +147,11 @@ function collectImages () {
     entryList = []
   }
 
-  const imgs = document.querySelectorAll('[data-test-id="board-feed"] a[href^="/pin/"] img')
+  const masonry = document.querySelector('[data-test-id="board-feed"] .masonryContainer')
+  if (!masonry) {
+    return
+  }
+  const imgs = masonry.querySelectorAll('a[href^="/pin/"] img')
   for (let i = 0; i < imgs.length; i++) {
     if (imgs[i].clientWidth < 100) {
       // Skip small images, these are user profile photos
@@ -395,6 +412,15 @@ function downloadOriginals () {
             statusbar.max = progress.total
             statusbar.value = progress.loaded
           } catch (e) { }
+        },
+        onerror: async function (response) {
+          console.error('Error downloading image:', response)
+          entry.filePath = ''
+          entry.fileUrl = 'https://github.com/cvzi/pinterest-Backup-Original-Files/blob/master/error.svg'
+          entry.note = 'Failed to download from: \'' + urls[0] + '\': ' + ('error' in response ? response.error : response.toString())
+          await addMetadata('error', entry, htmlOut, markdownOut)
+
+          work()
         }
       })
     } else {
